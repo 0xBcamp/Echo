@@ -12,6 +12,10 @@ are priced fairly and events are accessible to a wider range of attendees.
 Additionally, optimizes revenue potential and reduces the risk of unsold
 inventory for event organizers.
 
+## Architecture
+
+![FlexTicket architecture](FlexTicket-Arch.png)
+
 ## Features
 
 This was build using the typescript repo of scaffold-eth. Use scaffold-eth-typescript with:
