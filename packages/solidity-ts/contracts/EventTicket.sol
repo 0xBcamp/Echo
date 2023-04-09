@@ -5,11 +5,13 @@ import "@openzeppelin/contracts/token/ERC721/ERC721.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/Counters.sol";
 
+// This is a smart contract that inherits from ERC721 and Ownable
+// and represents the event tickets as NFTs
 contract EventTicket is ERC721, Ownable {
   using Counters for Counters.Counter;
-  Counters.Counter private _tokenIdCounter;
-  uint256 public maxSupply;
-  string public baseURI;
+  Counters.Counter private _tokenIdCounter; // Counter for assigning unique token ids
+  uint256 public maxSupply; // Maximum supply of tickets that can be minted
+  string public baseURI; // Base URI for generating metadata for each token
 
   constructor(
     string memory name,
@@ -21,6 +23,7 @@ contract EventTicket is ERC721, Ownable {
     baseURI = _uri;
   }
 
+  // Function for minting a new token and assigning it to a specified address (the buyer)
   function mint(address to) public onlyOwner returns (uint256) {
     require(_tokenIdCounter.current() < maxSupply, "Maximum supply reached");
     _tokenIdCounter.increment();
@@ -29,11 +32,13 @@ contract EventTicket is ERC721, Ownable {
     return newTokenId;
   }
 
+  // Function for updating the base URI used for generating metadata for each token
   function updateBaseURI(string memory _newURI) public onlyOwner returns (string memory) {
     baseURI = _newURI;
     return baseURI;
   }
 
+  // Internal function to get the base URI used for generating metadata for each token
   function _baseURI() internal view virtual override returns (string memory) {
     return baseURI;
   }

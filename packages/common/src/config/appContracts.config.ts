@@ -1,17 +1,11 @@
 /* eslint-disable @typescript-eslint/explicit-function-return-type */
-import {
-  createConnectorForExternalAbi,
-  createConnectorForExternalContract,
-  createConnectorForFoundryContract,
-  createConnectorForHardhatContract,
-} from 'eth-hooks/context';
+import { createConnectorForExternalContract, createConnectorForHardhatContract } from 'eth-hooks/context';
 import { invariant } from 'ts-invariant';
 
 import { externalContractsAddressMap } from './externalContracts.config';
 
 import * as toolkitContracts from '~common/generated/contract-types/';
 import * as externalContracts from '~common/generated/external-contracts/esm/types';
-import foundryDeployedContractsJson from '~common/generated/foundry_contracts.json';
 import hardhatDeployedContractsJson from '~common/generated/hardhat_contracts.json';
 import { scaffoldConfig } from '~common/scaffold.config';
 
@@ -36,28 +30,12 @@ export const appContractsConfig = () => {
       YourContract:
         scaffoldConfig.build.solidityToolkit === 'hardhat'
           ? createConnectorForHardhatContract(
-              'YourContract',
-              toolkitContracts.YourContract__factory,
-              hardhatDeployedContractsJson
-            )
-          : createConnectorForFoundryContract(
-              'YourContract',
-              toolkitContracts.YourContract__factory,
-              foundryDeployedContractsJson
-            ),
+              'TicketManager',
 
-      YourNFT:
-        scaffoldConfig.build.solidityToolkit === 'hardhat'
-          ? createConnectorForHardhatContract(
-              'YourNFT',
-              toolkitContracts.YourNFT__factory,
+              toolkitContracts.TicketManager__factory,
               hardhatDeployedContractsJson
             )
-          : createConnectorForFoundryContract(
-              'YourNFT',
-              toolkitContracts.YourNFT__factory,
-              foundryDeployedContractsJson
-            ),
+          : '',
 
       // --------------------------------------------------
       // 🙋🏽‍♂️ Add your external contracts here, make sure to define the address in `externalContractsConfig.ts`Í
@@ -67,16 +45,16 @@ export const appContractsConfig = () => {
       // --------------------------------------------------
       // 🙋🏽‍♂️ Add your external abi here (unverified contracts)`
       // --------------------------------------------------
-      YourContractFromAbi: createConnectorForExternalAbi(
-        'YourContract',
-        {
-          [1235]: {
-            address: 'xxx',
-          },
-        },
-        toolkitContracts.YourContract__factory.abi
-        // optional if you have a connect function:  externalContracts.YourContract__factory.connect
-      ),
+      // YourContractFromAbi: createConnectorForExternalAbi(
+      //   'YourContract',
+      //   {
+      //     [1235]: {
+      //       address: 'xxx',
+      //     },
+      //   },
+      //   toolkitContracts.YourContract__factory.abi
+      //   // optional if you have a connect function:  externalContracts.YourContract__factory.connect
+      // ),
     } as const;
 
     return result;
