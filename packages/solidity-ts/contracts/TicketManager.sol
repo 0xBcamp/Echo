@@ -6,16 +6,21 @@ import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "./EventTicket.sol";
 
+// This contract manages the sale of tickets for an event using an NFT contract
+// It inherits the Ownable contract to ensure that only the contract owner can call certain functions
+// It also implements the IERC721Receiver interface to handle incoming NFT transfers
 abstract contract TicketManager is Ownable, IERC721Receiver {
-  uint256 public basePrice;
-  address public nftAddress;
-  uint256 public totalTickets;
-  uint256 public ticketsSold;
-  uint256 public totalRevenue;
-  uint256 public startTime;
-  uint256 public endTime;
-  uint256 public discountPercentage;
+  // Public variables
+  uint256 public basePrice; // The base price of each ticket
+  address public nftAddress; // The address of the NFT contract (tickets)
+  uint256 public totalTickets; // The total number of tickets available for sale
+  uint256 public ticketsSold; // The number of tickets sold so far
+  uint256 public totalRevenue; // The total revenue generated from ticket sales
+  uint256 public startTime; // The start time of the ticket sale
+  uint256 public endTime; // The end time of the ticket sale
+  uint256 public discountPercentage; // The percentage discount applied to the base price of each ticket
 
+  // Mapping to keep track of the number of tickets owned by each buyer
   mapping(address => mapping(address => uint256)) ticketBalances;
 
   event TicketPurchased(address indexed buyer, uint256 price);
@@ -30,16 +35,18 @@ abstract contract TicketManager is Ownable, IERC721Receiver {
     uint256 _startTime,
     uint256 _endTime
   ) {
+    // Initialize public variables
     basePrice = _basePrice;
     totalTickets = _totalTickets;
     startTime = _startTime;
     endTime = _endTime;
 
+    // Create a new NFT contract for the event
     EventTicket nftContract = new EventTicket(string(abi.encodePacked(_eventName, " Ticket")), _symbol, _totalTickets, _baseURI);
-
-    nftAddress = address(nftContract);
+    nftAddress = address(nftContract); // Set the address of the NFT contract
   }
 
+  // Function to purchase a ticket
   function purchaseTicket() public payable {
     require(block.timestamp >= startTime, "Ticket sales have not started yet");
     require(block.timestamp <= endTime, "Ticket sales have ended");
@@ -62,6 +69,7 @@ abstract contract TicketManager is Ownable, IERC721Receiver {
     emit TicketPurchased(msg.sender, msg.value);
   }
 
+  // Function to get the current price of a ticket based on market conditions
   function getCurrentPrice() public view returns (uint256) {
     uint256 timeLeft = endTime - block.timestamp;
     uint256 ticketsLeft = totalTickets - ticketsSold;
@@ -91,33 +99,40 @@ abstract contract TicketManager is Ownable, IERC721Receiver {
     return adjustedPrice;
   }
 
+  // updateBasePrice function allows the contract owner to update the base ticket price for the event
   function updateBasePrice(uint256 newPrice) public onlyOwner {
     basePrice = newPrice;
     emit BasePriceChanged(newPrice);
   }
 
+  // updateTicketURI function allows the contract owner to update the base URI for
+  // the NFTs that represent the event tickets.
+  // The new URI is passed as an argument and is then passed on to the updateBaseURI function of the EventTicket contract
   function updateTicketURI(string memory _newURI) public onlyOwner {
     EventTicket nftContract = EventTicket(nftAddress);
     nftContract.updateBaseURI(_newURI);
   }
 
+  // setDiscount function allows the contract owner to set a discount percentage for the ticket price
   function setDiscount(uint256 percentage) public onlyOwner {
     require(discountPercentage == 0, "Need to cancel the current discount to set a new discount rate");
     require(percentage < 100, "Discount should be less than 100%, otherwise is not a discount");
+    require(percentage > 0, "Discount should be a positive number between 0 and 99");
     discountPercentage = percentage;
     basePrice = (basePrice * (100 - percentage)) / 100;
   }
 
+  // cancelDiscount function allows the contract owner to cancel any previously set discount
   function cancelDiscount() public onlyOwner {
+    require(discountPercentage > 0, "There's no discount to cancel");
     basePrice = (basePrice * 100) / (100 - discountPercentage);
     discountPercentage = 0;
   }
 
+  // withdraw function allows the contract owner to withdraw the total revenue earned from ticket sales once the event has ended.
   function withdraw() public onlyOwner {
-    // TODO should allow to withdraw anytime or only when the
-    // ticketing time ends ??
+    require(block.timestamp > endTime, "Ticket sales still active");
     (bool sent, ) = owner().call{ value: totalRevenue }("");
     require(sent, "Failed to withdraw the revenue");
-    // TODO delete contract after withdraw and time ends ??
   }
 }
