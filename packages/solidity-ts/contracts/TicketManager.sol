@@ -1,15 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/IERC721.sol";
-import "@openzeppelin/contracts/token/ERC721/IERC721Receiver.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
+import "@openzeppelin/contracts/utils/math/SafeMath.sol";
 import "./EventTicket.sol";
 
 // This contract manages the sale of tickets for an event using an NFT contract
 // It inherits the Ownable contract to ensure that only the contract owner can call certain functions
-// It also implements the IERC721Receiver interface to handle incoming NFT transfers
-abstract contract TicketManager is Ownable, IERC721Receiver {
+contract TicketManager is Ownable {
+  using SafeMath for uint256;
   // Public variables
   uint256 public basePrice; // The base price of each ticket
   address public nftAddress; // The address of the NFT contract (tickets)
@@ -53,7 +52,7 @@ abstract contract TicketManager is Ownable, IERC721Receiver {
     require(totalTickets > ticketsSold, "This event sold out!");
 
     uint256 price = getCurrentPrice();
-    require(msg.value >= price, "Insufficient funds to purchase tickets");
+    require(msg.value >= price, "Current ticket price is higher than the provided value");
 
     EventTicket nftContract = EventTicket(nftAddress);
 
@@ -71,30 +70,39 @@ abstract contract TicketManager is Ownable, IERC721Receiver {
 
   // Function to get the current price of a ticket based on market conditions
   function getCurrentPrice() public view returns (uint256) {
-    uint256 timeLeft = endTime - block.timestamp;
-    uint256 ticketsLeft = totalTickets - ticketsSold;
+    uint256 timeLeft = endTime.sub(block.timestamp).div(3600); // time left in hours
+    uint256 ticketsLeft = totalTickets.sub(ticketsSold);
+    require(ticketsLeft > 0, "No more tickets left!");
 
-    // Calculate the average number of tickets sold per second
-    uint256 saleRate = ticketsSold / (block.timestamp - startTime);
+    // Calculate the average number of tickets sold per hour
+    uint256 hoursElapsed = block.timestamp.sub(startTime).div(3600);
+    uint256 saleRate = 0;
+    if (hoursElapsed > 0) {
+      saleRate = ticketsSold.div(hoursElapsed);
+    }
+
+    // no sales rate, use base price
+    if (saleRate == 0) {
+      return basePrice;
+    }
 
     // Calculate the target sale rate based on the remaining time and inventory
-    uint256 targetSaleRate;
-    if (ticketsLeft == 0) {
-      targetSaleRate = saleRate;
-    } else {
-      targetSaleRate = (ticketsLeft * 2) / timeLeft; // Sell remaining tickets in half the remaining time
+    // Sell remaining tickets in half the remaining time
+    if (timeLeft == 0) {
+      timeLeft = 1;
     }
+    uint256 targetSaleRate = ticketsLeft.mul(2).div(timeLeft);
 
     // Calculate the adjustment factor based on the difference between the target and actual sale rates
     uint256 adjustmentFactor;
     if (saleRate >= targetSaleRate) {
-      adjustmentFactor = (saleRate - targetSaleRate) / (targetSaleRate / 100);
+      adjustmentFactor = saleRate.sub(targetSaleRate).mul(100).div(targetSaleRate);
     } else {
-      adjustmentFactor = (targetSaleRate - saleRate) / (targetSaleRate / 100);
+      adjustmentFactor = targetSaleRate.sub(saleRate).mul(100).div(targetSaleRate);
     }
 
-    // Apply the adjustment factor to the base price
-    uint256 adjustedPrice = (basePrice * (100 + adjustmentFactor)) / 100;
+    //Apply the adjustment factor to the base price
+    uint256 adjustedPrice = basePrice.add(adjustmentFactor);
 
     return adjustedPrice;
   }
