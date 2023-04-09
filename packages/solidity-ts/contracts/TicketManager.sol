@@ -139,6 +139,11 @@ contract TicketManager is Ownable {
 
   // withdraw function allows the contract owner to withdraw the total revenue earned from ticket sales once the event has ended.
   function withdraw() public onlyOwner {
+    // if no tickets left, then allow to withdraw and update endTime
+    uint256 ticketsLeft = totalTickets.sub(ticketsSold);
+    if (ticketsLeft == 0) {
+      endTime = block.timestamp;
+    }
     require(block.timestamp > endTime, "Ticket sales still active");
     (bool sent, ) = owner().call{ value: totalRevenue }("");
     require(sent, "Failed to withdraw the revenue");
